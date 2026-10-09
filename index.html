@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TaskFlow — Task Manager</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#161922; --panel2:#1d212c; --border:#2a2f3d;
+    --text:#eef0f4; --muted:#9aa1b2; --accent:#5b6cff; --accent2:#7c8cff;
+    --good:#34d399; --warn:#f59e0b; --bad:#f87171;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+    box-sizing:border-box;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f6fa; --panel:#ffffff; --panel2:#f0f1f6; --border:#e3e5ee;
+      --text:#1a1d29; --muted:#6b7183; --accent:#4f5fe0; --accent2:#6878ff;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1115; --panel:#161922; --panel2:#1d212c; --border:#2a2f3d; --text:#eef0f4; --muted:#9aa1b2;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .app{max-width:1000px;margin:0 auto;padding:20px 16px 40px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
+  h1{font-size:18px;margin:0}
+  .live{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 rgba(52,211,153,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.5)}70%{box-shadow:0 0 0 7px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+
+  /* Auth */
+  #authScreen{max-width:380px;margin:60px auto;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:28px}
+  #authScreen h2{margin-top:0;font-size:20px}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--panel2);padding:4px;border-radius:10px}
+  .tab{flex:1;text-align:center;padding:8px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--muted)}
+  .tab.active{background:var(--accent);color:#fff}
+  label{font-size:12px;color:var(--muted);display:block;margin:10px 0 5px}
+  input,select{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:14px}
+  input:focus,select:focus{outline:2px solid var(--accent)}
+  button{cursor:pointer;border:none;font-weight:600;font-family:inherit}
+  .btn{background:var(--accent);color:#fff;padding:10px 16px;border-radius:9px;font-size:14px}
+  .btn:hover{background:var(--accent2)}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+  .btn.small{padding:6px 10px;font-size:12px;border-radius:7px}
+  .btn.danger{background:transparent;border:1px solid var(--bad);color:var(--bad)}
+  .err{color:var(--bad);font-size:12px;margin-top:8px;min-height:14px}
+
+  /* Dashboard */
+  #dash{display:none}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .toolbar input[type=text]{flex:1;min-width:160px}
+  .filters{display:flex;gap:6px;background:var(--panel2);padding:4px;border-radius:9px}
+  .filters button{background:transparent;color:var(--muted);padding:6px 12px;border-radius:7px;font-size:12px}
+  .filters button.active{background:var(--accent);color:#fff}
+  .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:720px){.cols{grid-template-columns:1fr}}
+  .col{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px;min-height:120px}
+  .col h3{margin:2px 6px 10px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between}
+  .card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;cursor:grab}
+  .card:active{cursor:grabbing}
+  .card h4{margin:0 0 4px;font-size:14px}
+  .card p{margin:0 0 8px;font-size:12px;color:var(--muted);line-height:1.4}
+  .meta{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}
+  .badge{font-size:10px;padding:3px 7px;border-radius:999px;font-weight:600}
+  .badge.low{background:rgba(52,211,153,.15);color:var(--good)}
+  .badge.med{background:rgba(245,158,11,.15);color:var(--warn)}
+  .badge.high{background:rgba(248,113,113,.15);color:var(--bad)}
+  .card .actions{display:flex;gap:6px}
+  .card .actions button{background:transparent;color:var(--muted);padding:2px 6px;font-size:12px}
+  .card .actions button:hover{color:var(--text)}
+  .empty{color:var(--muted);font-size:12px;text-align:center;padding:14px 4px}
+
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+  .overlay.show{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:420px;width:100%}
+  .modal h3{margin-top:0}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+  footer{text-align:center;color:var(--muted);font-size:11px;margin-top:26px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div id="authScreen">
+    <div class="brand" style="margin-bottom:16px">
+      <div class="logo">TF</div><h1>TaskFlow</h1>
+    </div>
+    <div class="tabs">
+      <div class="tab active" id="tabLogin">Log in</div>
+      <div class="tab" id="tabSignup">Sign up</div>
+    </div>
+    <h2 id="authTitle">Welcome back</h2>
+    <label>Email</label>
+    <input type="text" id="authEmail" placeholder="you@example.com">
+    <label>Password</label>
+    <input type="password" id="authPass" placeholder="••••••••">
+    <button class="btn" style="width:100%;margin-top:16px" id="authSubmit">Log in</button>
+    <div class="err" id="authErr"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px">Demo auth — stored only in this session, no server required.</div>
+  </div>
+
+  <div id="dash">
+    <header>
+      <div class="brand"><div class="logo">TF</div><h1>TaskFlow</h1></div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div class="live"><span class="dot"></span><span id="userLabel">—</span></div>
+        <button class="btn ghost small" id="logoutBtn">Log out</button>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="Search tasks...">
+      <div class="filters" id="priorityFilters">
+        <button data-p="all" class="active">All</button>
+        <button data-p="low">Low</button>
+        <button data-p="med">Med</button>
+        <button data-p="high">High</button>
+      </div>
+      <button class="btn" id="newTaskBtn">+ New Task</button>
+    </div>
+
+    <div class="cols">
+      <div class="col" data-status="todo"><h3>To Do <span id="count-todo">0</span></h3><div class="list" id="list-todo"></div></div>
+      <div class="col" data-status="progress"><h3>In Progress <span id="count-progress">0</span></h3><div class="list" id="list-progress"></div></div>
+      <div class="col" data-status="done"><h3>Done <span id="count-done">0</span></h3><div class="list" id="list-done"></div></div>
+    </div>
+
+    <footer>Full-stack demo: auth · CRUD · responsive · drag between columns = real-time status updates.</footer>
+  </div>
+
+</div>
+
+<div class="overlay" id="taskOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">New Task</h3>
+    <label>Title</label>
+    <input type="text" id="tTitle" placeholder="Task title">
+    <label>Description</label>
+    <input type="text" id="tDesc" placeholder="Short description">
+    <div class="row2">
+      <div><label>Priority</label>
+        <select id="tPriority"><option value="low">Low</option><option value="med" selected>Medium</option><option value="high">High</option></select>
+      </div>
+      <div><label>Status</label>
+        <select id="tStatus"><option value="todo">To Do</option><option value="progress">In Progress</option><option value="done">Done</option></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="cancelBtn">Cancel</button>
+      <button class="btn" id="saveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- In-memory "backend" (simulated auth + CRUD store) ----
+const users = {}; // email -> password
+let currentUser = null;
+let tasks = [];
+let taskSeq = 1;
+let editingId = null;
+
+const el = id => document.getElementById(id);
+
+// ---- Auth ----
+let mode = 'login';
+el('tabLogin').onclick = () => setMode('login');
+el('tabSignup').onclick = () => setMode('signup');
+function setMode(m){
+  mode = m;
+  el('tabLogin').classList.toggle('active', m==='login');
+  el('tabSignup').classList.toggle('active', m==='signup');
+  el('authTitle').textContent = m==='login' ? 'Welcome back' : 'Create your account';
+  el('authSubmit').textContent = m==='login' ? 'Log in' : 'Sign up';
+  el('authErr').textContent = '';
+}
+el('authSubmit').onclick = () => {
+  const email = el('authEmail').value.trim();
+  const pass = el('authPass').value;
+  if(!email || !pass){ el('authErr').textContent = 'Enter an email and password.'; return; }
+  if(mode === 'signup'){
+    if(users[email]){ el('authErr').textContent = 'Account already exists — log in instead.'; return; }
+    users[email] = pass;
+  } else {
+    if(!users[email]){ el('authErr').textContent = 'No account found — sign up first.'; return; }
+    if(users[email] !== pass){ el('authErr').textContent = 'Incorrect password.'; return; }
+  }
+  currentUser = email;
+  el('userLabel').textContent = email;
+  el('authScreen').style.display = 'none';
+  el('dash').style.display = 'block';
+  seedIfEmpty();
+  render();
+};
+el('logoutBtn').onclick = () => {
+  currentUser = null;
+  el('dash').style.display = 'none';
+  el('authScreen').style.display = 'block';
+  el('authPass').value = '';
+};
+
+function seedIfEmpty(){
+  if(tasks.length) return;
+  tasks = [
+    {id:taskSeq++, title:'Design login screen', desc:'Auth UI with validation', priority:'med', status:'done'},
+    {id:taskSeq++, title:'Build task CRUD API', desc:'Create/read/update/delete endpoints', priority:'high', status:'progress'},
+    {id:taskSeq++, title:'Add WebSocket live sync', desc:'Push updates to all clients', priority:'low', status:'todo'},
+  ];
+}
+
+// ---- CRUD ----
+let activeFilter = 'all';
+document.querySelectorAll('#priorityFilters button').forEach(b=>{
+  b.onclick = () => {
+    activeFilter = b.dataset.p;
+    document.querySelectorAll('#priorityFilters button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    render();
+  };
+});
+el('search').oninput = render;
+
+el('newTaskBtn').onclick = () => openModal();
+el('cancelBtn').onclick = closeModal;
+function openModal(task){
+  editingId = task ? task.id : null;
+  el('modalTitle').textContent = task ? 'Edit Task' : 'New Task';
+  el('tTitle').value = task ? task.title : '';
+  el('tDesc').value = task ? task.desc : '';
+  el('tPriority').value = task ? task.priority : 'med';
+  el('tStatus').value = task ? task.status : 'todo';
+  el('taskOverlay').classList.add('show');
+}
+function closeModal(){ el('taskOverlay').classList.remove('show'); }
+
+el('saveBtn').onclick = () => {
+  const title = el('tTitle').value.trim();
+  if(!title) return;
+  const data = {
+    title, desc: el('tDesc').value.trim(),
+    priority: el('tPriority').value, status: el('tStatus').value
+  };
+  if(editingId){
+    const t = tasks.find(x=>x.id===editingId);
+    Object.assign(t, data);
+  } else {
+    tasks.push({id:taskSeq++, ...data});
+  }
+  closeModal();
+  render();
+};
+
+function deleteTask(id){
+  tasks = tasks.filter(t=>t.id!==id);
+  render();
+}
+
+// ---- Render ----
+function render(){
+  const q = el('search').value.toLowerCase();
+  ['todo','progress','done'].forEach(status=>{
+    const list = el('list-'+status);
+    list.innerHTML = '';
+    const filtered = tasks.filter(t=>
+      t.status===status &&
+      (activeFilter==='all' || t.priority===activeFilter) &&
+      (t.title.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q))
+    );
+    el('count-'+status).textContent = filtered.length;
+    if(!filtered.length){
+      list.innerHTML = '<div class="empty">No tasks</div>';
+      return;
+    }
+    filtered.forEach(t=>{
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.draggable = true;
+      card.dataset.id = t.id;
+      card.innerHTML = `
+        <h4>${escapeHtml(t.title)}</h4>
+        <p>${escapeHtml(t.desc||'')}</p>
+        <div class="meta">
+          <span class="badge ${t.priority}">${t.priority.toUpperCase()}</span>
+          <div class="actions">
+            <button data-act="edit">Edit</button>
+            <button data-act="del">Delete</button>
+          </div>
+        </div>`;
+      card.querySelector('[data-act=edit]').onclick = () => openModal(t);
+      card.querySelector('[data-act=del]').onclick = () => deleteTask(t.id);
+      card.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', t.id));
+      list.appendChild(card);
+    });
+  });
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Drag & drop between columns = "real-time" status update
+document.querySelectorAll('.col').forEach(col=>{
+  col.addEventListener('dragover', e => e.preventDefault());
+  col.addEventListener('drop', e => {
+    e.preventDefault();
+    const id = Number(e.dataTransfer.getData('text/plain'));
+    const t = tasks.find(x=>x.id===id);
+    if(t){ t.status = col.dataset.status; render(); }
+  });
+});
+</script>
+</body>
+</html>
