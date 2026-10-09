@@ -18,7 +18,7 @@ A web application for creating, updating, and tracking tasks, built as an intern
 2. Open `index.html` in any browser — no build step or server required
 
 ## Live Demo
-[Add your GitHub Pages link here]
+ https://gnanaprakashj761-source.github.io/task-manager-app/
 
 ## Learning Outcomes
 This project demonstrates full-stack application structure, API-style data handling, and dynamic UI updates for task tracking.
